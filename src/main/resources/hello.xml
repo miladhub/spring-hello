@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xmlns:tx="http://www.springframework.org/schema/tx"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans 
+          http://www.springframework.org/schema/beans/spring-beans-2.0.xsd
+          http://www.springframework.org/schema/aop 
+          http://www.springframework.org/schema/aop/spring-aop-2.0.xsd
+          http://www.springframework.org/schema/tx
+		  http://www.springframework.org/schema/tx/spring-tx-2.0.xsd">
+
+	<!-- greeting service -->
+	
+    <bean id="greeting"
+        class="org.sample.spring.hello.GreetingServiceImpl">
+        <property name="greeting">
+            <value>Greetings, outlander!</value>
+        </property>
+       	<property name="env" ref="env" />
+    </bean>
+    
+    <bean id="env"
+    	class="org.sample.spring.hello.EnvServiceImpl"/>
+    
+    <bean id="greetingLogger"
+        class="org.sample.spring.hello.GreetingLogger"/>
+        
+    <!-- logging advisor for the greeting service -->
+    
+    <aop:config>
+    	<!--
+    	 | aspect: wires pointcut and advise, telling
+    	 | what to do (which method to call), for which methods (where)
+    	 | and when (before those methods, or after, or both) 
+    	 -->
+        <aop:aspect ref="greetingLogger">   
+        	<!--
+        	 | pointcut: defines *where* (to which methods) to apply advises
+        	 | it select one of the joinpoints of the application where to apply the advise
+        	 | withing Spring's AOP, joinpoints can only be method calls
+        	 -->     
+            <aop:pointcut
+                id="greetingPointcut"
+                expression="execution(* *.sayGreeting(..)) and target( arg )" />
+            
+            <!--
+             | advise: defines *what* (which method to run when triggered) to apply
+             | and *when* (before)
+             -->    
+            <aop:before
+                method="before"
+                pointcut-ref="greetingPointcut"
+                arg-names="arg" />
+                
+            <aop:after-returning
+                method="after"
+                pointcut-ref="greetingPointcut"
+                arg-names="arg" />            
+        </aop:aspect>
+    </aop:config>
+    
+    <!-- persistence -->
+    
+    <!-- jdbc demo implementation
+    <bean id="personDao"
+    	class="org.sample.spring.hello.PersonDaoJdbcImpl">
+    	<property name="dataSource" ref="dataSource"/>
+    </bean>
+    -->
+    
+    <!-- JPA, Hibernate -->
+    <bean id="personDao"
+		class="org.sample.spring.hello.PersonDaoJpaImpl">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+	</bean>
+	
+    <bean id="entityManagerFactory"
+		class="org.springframework.orm.jpa.LocalContainerEntityManagerFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="jpaVendorAdapter">
+			<bean class="org.springframework.orm.jpa.vendor.HibernateJpaVendorAdapter">             
+				<property name="showSql" value="true"/>
+				<property name="generateDdl" value="false"/>
+				<property name="database" value="MYSQL"/>
+			</bean>
+		</property>
+	</bean>
+	
+	<!-- transactions -->
+	
+	<bean id="jpaDialect"
+		class="org.springframework.orm.jpa.vendor.HibernateJpaDialect" />
+
+	<bean id="transactionManager"
+		class="org.springframework.orm.jpa.JpaTransactionManager">
+		<property name="entityManagerFactory" ref="entityManagerFactory" />
+		<property name="jpaDialect" ref="jpaDialect" />
+	</bean>
+	
+	<!--
+	 | declarative transactions using Spring AOP.
+	 | we define that for certain methods (pointcut: the *where*) transactions
+	 | must be applied
+	 | the advise defines what to do (apply transactions, with certain policies)
+	 | and (implicitly) when to do it (like around advice)
+	 -->
+	<tx:advice id="txAdvice">
+		<tx:attributes>
+			<tx:method name="insert*" propagation="REQUIRED" />
+			<tx:method name="*" propagation="SUPPORTS" read-only="true"/>
+		</tx:attributes>
+	</tx:advice>
+	
+	<aop:config>
+		<aop:advisor
+			pointcut="execution(* *..PersonDao.*(..))"
+			advice-ref="txAdvice"/>
+	</aop:config>
+
+</beans>
