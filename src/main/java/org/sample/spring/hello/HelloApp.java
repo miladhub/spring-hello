@@ -2,7 +2,10 @@ package org.sample.spring.hello;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.math.BigInteger;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import org.apache.log4j.Logger;
 import org.springframework.beans.factory.xml.XmlBeanDefinitionReader;
@@ -149,9 +152,14 @@ public class HelloApp {
 			}
 			else if ("show".equals(args[0]))
 				app.showPersonByNameAndSurname(args[1], args[2]);
-			else if ("add".equals(args[0]))
-				app.addPerson(new Person(args[1], args[2], args[3], Integer.parseInt(args[4])));
-			else if ("quit".equals(args[0])) {
+			else if ("add".equals(args[0])) {
+				Map<String,Object> attributesAsMap = new HashMap<>();
+				attributesAsMap.put("the name", args[1]);
+				attributesAsMap.put("the surname", args[2]);
+				attributesAsMap.put("the age as biginteger", BigInteger.valueOf(42));
+				app.addPerson(new Person(args[1], args[2], args[3], Integer.parseInt(args[4]),
+						attributesAsMap));
+			} else if ("quit".equals(args[0])) {
 				logger.info("bye.");
 				System.exit(0);
 			}
